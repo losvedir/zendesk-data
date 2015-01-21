@@ -1,0 +1,10 @@
+[package]
+name = "zendesk_data"
+version = "0.0.1"
+authors = [ "Gabe Durazo <gabe@durazo.us>" ]
+
+[[bin]]
+name = "zendesk_data"
+
+[dependencies.xml-rs]
+version = "*"
