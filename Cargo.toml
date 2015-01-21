@@ -6,5 +6,8 @@ authors = [ "Gabe Durazo <gabe@durazo.us>" ]
 [[bin]]
 name = "zendesk_data"
 
-[dependencies.xml-rs]
+[dependencies.regex]
+version = "*"
+
+[dependencies.regex_macros]
 version = "*"

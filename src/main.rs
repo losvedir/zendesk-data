@@ -1,37 +1,20 @@
-extern crate xml;
+#![feature(plugin)]
+#[plugin] #[no_link]
+extern crate regex_macros;
+extern crate regex;
 
 use std::io::{File, BufferedReader};
-use xml::reader::EventReader;
-use xml::reader::events::*;
 
 fn main() {
-    let file = File::open(&Path::new("xml-data/users.xml")).unwrap();
-    let reader = BufferedReader::new(file);
-    let mut parser = EventReader::new(reader);
-    let mut in_name = true;
-    let mut names : i32 = 0;
+    let file = File::open(&Path::new("xml-data/users.xml"));
+    let mut reader = BufferedReader::new(file);
+    let re = regex!(r"<name>.*</name>");
+    let mut names: i32 = 0;
 
-    for e in parser.events() {
-        match e {
-            XmlEvent::StartElement { name, attributes: _, namespace: _ } => {
-                if name.local_name == "name" {
-                    in_name = true;
-                }
-            },
-            XmlEvent::EndElement { name } => {
-                if name.local_name == "name" {
-                    in_name = false;
-                }
-            },
-            XmlEvent::Characters(chars) => {
-                if in_name {
-                    // println!("{}", chars);
-                    names += 1;
-                }
-            },
-            _ => {}
+    for line in reader.lines() {
+        if re.is_match(line.unwrap().as_slice()) {
+            names += 1;
         }
     }
-
     println!("{}", names);
 }
