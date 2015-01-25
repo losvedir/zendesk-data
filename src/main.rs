@@ -50,6 +50,10 @@ impl User {
 }
 
 fn main() {
+    handle_users();
+}
+
+fn handle_users() {
     let mut xml_reader = BufferedReader::new(File::open(&Path::new("xml-data/users.xml")));
     let mut csv_writer = csv::Writer::from_file(&Path::new("users.csv"));
 
@@ -106,6 +110,7 @@ fn main() {
     }
     let _ = csv_writer.flush();
 }
+
 
 fn first_capture_as_string(caps_line: Option<regex::Captures>) -> Option<String> {
     match caps_line {
