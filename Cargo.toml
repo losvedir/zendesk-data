@@ -6,8 +6,14 @@ authors = [ "Gabe Durazo <gabe@durazo.us>" ]
 [[bin]]
 name = "zendesk_data"
 
+[dependencies.csv]
+version = "*"
+
 [dependencies.regex]
 version = "*"
 
 [dependencies.regex_macros]
+version = "*"
+
+[dependencies.rustc-serialize]
 version = "*"
