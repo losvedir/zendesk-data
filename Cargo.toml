@@ -17,3 +17,6 @@ version = "*"
 
 [dependencies.rustc-serialize]
 version = "*"
+
+[dependencies.xml-rs]
+version = "*"
