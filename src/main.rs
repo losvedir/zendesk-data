@@ -1,4 +1,7 @@
+#![feature(core)]
+#![feature(path)]
 #![feature(plugin)]
+#![feature(io)]
 
 extern crate csv;
 #[plugin] #[no_link]
@@ -9,7 +12,6 @@ extern crate xml;
 
 use std::old_io::{File, BufferedReader};
 use std::option::{Option};
-use std::str::{FromStr};
 use xml::reader::EventReader;
 use xml::reader::events::*;
 
@@ -302,7 +304,7 @@ fn handle_users() {
         if re_begin_user.is_match(line) {
             user = User::empty();
         } else if re_end_user.is_match(line) {
-            csv_writer.encode(&user);
+            let _ = csv_writer.encode(&user);
         } else if re_id.is_match(line) {
             user.id = first_capture_as_i32(re_id.captures(line));
         } else if re_email.is_match(line) {
@@ -340,7 +342,14 @@ fn first_capture_as_string(caps_line: Option<regex::Captures>) -> Option<String>
 
 fn first_capture_as_i32(caps_line: Option<regex::Captures>) -> Option<i32> {
     match caps_line {
-        Some(caps) => { caps.at(1).and_then(|cap| FromStr::from_str(cap)) },
+        Some(caps) => {
+            caps.at(1).and_then(|cap|
+                match cap.parse() {
+                    Ok(i) => { Some(i) },
+                    _ => { None }
+                }
+            )
+        },
         None => { None }
     }
 }
