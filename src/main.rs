@@ -1,19 +1,15 @@
-#![feature(core)]
-#![feature(path)]
-#![feature(plugin)]
-#![feature(io)]
-
 extern crate csv;
-#[plugin] #[no_link]
-extern crate regex_macros;
 extern crate regex;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 extern crate xml;
 
-use std::old_io::{File, BufferedReader};
+use std::io::BufReader;
+use std::io::BufRead;
+use std::fs::File;
 use std::option::{Option};
 use xml::reader::EventReader;
-use xml::reader::events::*;
+use xml::reader::XmlEvent;
+use regex::Regex;
 
 #[derive(RustcEncodable)]
 struct User {
@@ -165,9 +161,9 @@ fn main() {
 }
 
 fn handle_tickets() {
-    let buf = BufferedReader::new(File::open(&Path::new("xml-data/tickets.xml")));
-    let mut parser = EventReader::new(buf);
-    let mut csv_writer = csv::Writer::from_file(&Path::new("tickets.csv"));
+    let buf = BufReader::new(File::open("xml-data/tickets.xml").unwrap());
+    let parser = EventReader::new(buf);
+    let mut csv_writer = csv::Writer::from_file("tickets.csv").unwrap();
     let mut ticket = Ticket::empty();
     let mut current_tag: Option<TicketField> = None;
     let mut in_comments = false;
@@ -176,10 +172,10 @@ fn handle_tickets() {
     // this many fields aren't auto-encodable.
     // let _ = csv_writer.encode(("assigned_at", "assignee_id", etc));
 
-    for e in parser.events() {
+    for e in parser.into_iter() {
         match e {
-            XmlEvent::StartElement { name, attributes: _, namespace: _ } => {
-                match &name.local_name[] {
+            Ok(XmlEvent::StartElement { name, attributes: _, namespace: _ }) => {
+                match name.local_name.as_str() {
                     "ticket" => { ticket = Ticket::empty(); },
                     "comments" => { in_comments = true; }
                     "assigned-at" => { current_tag = Some(TicketField::AssignedAt) },
@@ -224,15 +220,15 @@ fn handle_tickets() {
                     _ => { current_tag = None; }
                 }
             },
-            XmlEvent::EndElement { name } => {
-                if &name.local_name[] == "ticket" {
+            Ok(XmlEvent::EndElement { name }) => {
+                if &name.local_name == "ticket" {
                     let _ = csv_writer.encode(&ticket);
-                } else if &name.local_name[] == "comments" {
+                } else if &name.local_name == "comments" {
                     in_comments = false;
                 }
                 current_tag = None;
             },
-            XmlEvent::Characters(text) => {
+            Ok(XmlEvent::Characters(text)) => {
                 match current_tag {
                     Some(TicketField::AssignedAt) => { ticket.assigned_at = Some(text) },
                     Some(TicketField::AssigneeId) => { ticket.assignee_id = Some(text) },
@@ -275,31 +271,31 @@ fn handle_tickets() {
 }
 
 fn handle_users() {
-    let mut xml_reader = BufferedReader::new(File::open(&Path::new("xml-data/users.xml")));
-    let mut csv_writer = csv::Writer::from_file(&Path::new("users.csv"));
+    let xml_reader = BufReader::new(File::open("xml-data/users.xml").unwrap());
+    let mut csv_writer = csv::Writer::from_file("users.csv").unwrap();
 
     let _ = csv_writer.encode(("id", "email", "created-at", "details", "external-id", "is-active", "last-login", "name",
         "organization-id", "phone", "updated-at", "is-verified"));
 
-    let re_begin_user = regex!(r"<user>");
-    let re_end_user = regex!(r"</user>");
-    let re_id = regex!(r"<id.*?>(.*)</id>");
-    let re_email = regex!(r"<email.*?>(.*)</email>");
-    let re_created_at = regex!(r"<created-at.*?>(.*)</created-at>");
-    let re_details = regex!(r"<details.*?>(.*)</details>");
-    let re_external_id = regex!(r"<external-id.*?>(.*)</external-id>");
-    let re_is_active = regex!(r"<is-active.*?>(.*)</is-active>");
-    let re_last_login = regex!(r"<last-login.*?>(.*)</last-login>");
-    let re_organization_id = regex!(r"<organization-id.*?>(.*)</organization-id>");
-    let re_phone = regex!(r"<phone.*?>(.*)</phone>");
-    let re_updated_at = regex!(r"<updated-at.*?>(.*)</updated-at>");
-    let re_is_verified = regex!(r"<is-verified.*?>(.*)</is-verified>");
+    let re_begin_user = Regex::new(r"<user>").unwrap();
+    let re_end_user = Regex::new(r"</user>").unwrap();
+    let re_id = Regex::new(r"<id.*?>(.*)</id>").unwrap();
+    let re_email = Regex::new(r"<email.*?>(.*)</email>").unwrap();
+    let re_created_at = Regex::new(r"<created-at.*?>(.*)</created-at>").unwrap();
+    let re_details = Regex::new(r"<details.*?>(.*)</details>").unwrap();
+    let re_external_id = Regex::new(r"<external-id.*?>(.*)</external-id>").unwrap();
+    let re_is_active = Regex::new(r"<is-active.*?>(.*)</is-active>").unwrap();
+    let re_last_login = Regex::new(r"<last-login.*?>(.*)</last-login>").unwrap();
+    let re_organization_id = Regex::new(r"<organization-id.*?>(.*)</organization-id>").unwrap();
+    let re_phone = Regex::new(r"<phone.*?>(.*)</phone>").unwrap();
+    let re_updated_at = Regex::new(r"<updated-at.*?>(.*)</updated-at>").unwrap();
+    let re_is_verified = Regex::new(r"<is-verified.*?>(.*)</is-verified>").unwrap();
 
     let mut user = User::empty();
 
     for l in xml_reader.lines() {
         let a: String = l.unwrap();
-        let line: &str = &a[];
+        let line: &str = &a;
 
         if re_begin_user.is_match(line) {
             user = User::empty();
@@ -335,7 +331,7 @@ fn handle_users() {
 
 fn first_capture_as_string(caps_line: Option<regex::Captures>) -> Option<String> {
     match caps_line {
-        Some(caps) => { caps.at(1).map(|cap| cap.to_string()) },
+        Some(caps) => { caps.get(1).map(|cap| cap.as_str().to_string()) },
         None => { None }
     }
 }
@@ -343,8 +339,8 @@ fn first_capture_as_string(caps_line: Option<regex::Captures>) -> Option<String>
 fn first_capture_as_i32(caps_line: Option<regex::Captures>) -> Option<i32> {
     match caps_line {
         Some(caps) => {
-            caps.at(1).and_then(|cap|
-                match cap.parse() {
+            caps.get(1).and_then(|cap|
+                match cap.as_str().parse() {
                     Ok(i) => { Some(i) },
                     _ => { None }
                 }
@@ -356,7 +352,7 @@ fn first_capture_as_i32(caps_line: Option<regex::Captures>) -> Option<i32> {
 
 fn first_capture_as_bool(caps_line: Option<regex::Captures>) -> Option<bool> {
     match caps_line {
-        Some(caps) => { caps.at(1).map(|cap| cap == "true") },
+        Some(caps) => { caps.get(1).map(|cap| cap.as_str() == "true") },
         None => { None }
     }
 }
